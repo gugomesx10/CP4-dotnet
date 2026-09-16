@@ -21,4 +21,9 @@
         <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.5.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\CP4.Application\CP4.Application.csproj" />
+      <ProjectReference Include="..\CP4.Infrastructure\CP4.Infrastructure.csproj" />
+    </ItemGroup>
+
 </Project>

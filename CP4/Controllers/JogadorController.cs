@@ -1,7 +1,7 @@
-﻿using CP4.Data;
-using CP4.DTOs;
-using CP4.Entities;
-using CP4.DTOs.Responses;
+﻿using CP4.Infrastructure.Data;
+using CP4.Application.DTOs;
+using CP4.Application.DTOs.Responses;
+using CP4.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;

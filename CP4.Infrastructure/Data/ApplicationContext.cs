@@ -1,7 +1,7 @@
-﻿using CP4.Entities;
+﻿using CP4.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CP4.Data;
+namespace CP4.Infrastructure.Data;
 
 public class ApplicationContext : DbContext
 {

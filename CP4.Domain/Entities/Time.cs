@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CP4.Entities;
+namespace CP4.Domain.Entities;
 
 public class Time
 {

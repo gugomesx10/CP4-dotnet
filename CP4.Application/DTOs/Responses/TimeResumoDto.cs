@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CP4.DTOs.Responses;
+namespace CP4.Application.DTOs.Responses;
 
 public class TimeResumoDto
 {

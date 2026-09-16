@@ -1,12 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CP4.DTOs.Responses;
+namespace CP4.Application.DTOs;
 
-public class JogadorResumoDto
+public class JogadorCreateDto
 {
-    [Required]
-    public int Id { get; set; }
-
     [Required]
     [MaxLength(80)]
     public string Nickname { get; set; } = string.Empty;
@@ -18,5 +15,6 @@ public class JogadorResumoDto
     [Range(12, 60)]
     public int Idade { get; set; }
 
-    public TimeResumoDto? Time { get; set; }
+    [Required]
+    public int TimeId { get; set; }
 }

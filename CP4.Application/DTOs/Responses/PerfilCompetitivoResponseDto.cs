@@ -1,24 +1,23 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CP4.Entities;
+namespace CP4.Application.DTOs.Responses;
 
-public class PerfilCompetitivo
+public class PerfilCompetitivoResponseDto
 {
-    [Key]
+    [Required]
     public int Id { get; set; }
-    
+
     [Range(0, 50)]
     public double KDA { get; set; }
-    
+
     [Range(0, 100)]
     public double WinRate { get; set; }
-    
+
     [Range(0, 50000)]
     public int HorasJogadas { get; set; }
-    
-    [ForeignKey("Jogador")]
+
+    [Required]
     public int JogadorId { get; set; }
-    
-    public Jogador? Jogador { get; set; }
+
+    public JogadorResumoDto? Jogador { get; set; }
 }

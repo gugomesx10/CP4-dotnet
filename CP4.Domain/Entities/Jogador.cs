@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CP4.Entities;
+namespace CP4.Domain.Entities;
 
 public class Jogador
 {

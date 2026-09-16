@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CP4.DTOs;
+namespace CP4.Application.DTOs;
 
 public class PerfilCompetitivoCreateDto
 {

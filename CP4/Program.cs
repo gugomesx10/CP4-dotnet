@@ -1,5 +1,5 @@
 using System.Reflection;
-using CP4.Data;
+using CP4.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
