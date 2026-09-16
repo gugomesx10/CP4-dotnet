@@ -48,6 +48,8 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
 
 builder.Services.AddScoped<ITimeRepository, TimeRepository>();
 builder.Services.AddScoped<ITimeService, TimeService>();
+builder.Services.AddScoped<IJogadorRepository, JogadorRepository>();
+builder.Services.AddScoped<IJogadorService, JogadorService>();
 
 var app = builder.Build();
 

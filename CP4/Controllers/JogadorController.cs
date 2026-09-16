@@ -1,9 +1,6 @@
-﻿using CP4.Infrastructure.Data;
-using CP4.Application.DTOs;
-using CP4.Application.DTOs.Responses;
-using CP4.Domain.Entities;
+﻿using CP4.Application.DTOs;
+using CP4.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace CP4.Controllers;
@@ -12,45 +9,27 @@ namespace CP4.Controllers;
 [Route("api/[controller]")]
 public class JogadorController : ControllerBase
 {
-    private readonly ApplicationContext _context;
+    private readonly IJogadorService _jogadorService;
 
-    public JogadorController(ApplicationContext context)
+    public JogadorController(IJogadorService jogadorService)
     {
-        _context = context;
+        _jogadorService = jogadorService;
     }
 
     /// <summary>
-    /// Retorna todos os jogadores cadastrados com seus times e perfis competitivos.
+    /// Retorna todos os jogadores cadastrados com seus times.
     /// </summary>
     [HttpGet]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado")]
     public async Task<IActionResult> GetAll()
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .ToListAsync();
+        var jogadores = await _jogadorService.GetAllAsync();
 
         if (!jogadores.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
@@ -61,30 +40,12 @@ public class JogadorController : ControllerBase
     [SwaggerResponse(404, "Jogador não encontrado")]
     public async Task<IActionResult> GetById(int id)
     {
-        var jogador = await _context.Jogadores
-            .Include(j => j.Time)
-            .FirstOrDefaultAsync(j => j.Id == id);
+        var jogador = await _jogadorService.GetByIdAsync(id);
 
         if (jogador == null)
             return NotFound();
 
-        var response = new JogadorResumoDto
-        {
-            Id = jogador.Id,
-            Nickname = jogador.Nickname,
-            Funcao = jogador.Funcao,
-            Idade = jogador.Idade,
-            Time = jogador.Time == null ? null : new TimeResumoDto
-            {
-                Id = jogador.Time.Id,
-                Nome = jogador.Time.Nome,
-                Jogo = jogador.Time.Jogo,
-                Pais = jogador.Time.Pais,
-                Ranking = jogador.Time.Ranking
-            }
-        };
-
-        return Ok(response);
+        return Ok(jogador);
     }
 
     /// <summary>
@@ -95,31 +56,12 @@ public class JogadorController : ControllerBase
     [SwaggerResponse(204, "Nenhum jogador encontrado para este time")]
     public async Task<IActionResult> GetByTime(int timeId)
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .Where(j => j.TimeId == timeId)
-            .ToListAsync();
+        var jogadores = await _jogadorService.GetByTimeAsync(timeId);
 
         if (!jogadores.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
@@ -130,31 +72,12 @@ public class JogadorController : ControllerBase
     [SwaggerResponse(204, "Nenhum jogador encontrado para esta função")]
     public async Task<IActionResult> GetByFuncao(string funcao)
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .Where(j => j.Funcao.ToLower() == funcao.ToLower())
-            .ToListAsync();
+        var jogadores = await _jogadorService.GetByFuncaoAsync(funcao);
 
         if (!jogadores.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
@@ -169,23 +92,16 @@ public class JogadorController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = await _context.Times.FirstOrDefaultAsync(t => t.Id == dto.TimeId);
+        var jogador = await _jogadorService.CreateAsync(dto);
 
-        if (time == null)
+        if (jogador == null)
             return NotFound("Time não encontrado.");
 
-        var jogador = new Jogador
-        {
-            Nickname = dto.Nickname,
-            Funcao = dto.Funcao,
-            Idade = dto.Idade,
-            TimeId = dto.TimeId
-        };
-
-        _context.Jogadores.Add(jogador);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = jogador.Id }, jogador);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = jogador.Id },
+            jogador
+        );
     }
 
     /// <summary>
@@ -200,22 +116,10 @@ public class JogadorController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var jogador = await _context.Jogadores.FindAsync(id);
+        var jogador = await _jogadorService.UpdateAsync(id, dto);
 
         if (jogador == null)
-            return NotFound("Jogador não encontrado.");
-
-        var time = await _context.Times.FirstOrDefaultAsync(t => t.Id == dto.TimeId);
-
-        if (time == null)
-            return NotFound("Time não encontrado.");
-
-        jogador.Nickname = dto.Nickname;
-        jogador.Funcao = dto.Funcao;
-        jogador.Idade = dto.Idade;
-        jogador.TimeId = dto.TimeId;
-
-        await _context.SaveChangesAsync();
+            return NotFound("Jogador ou time não encontrado.");
 
         return Ok(jogador);
     }
@@ -228,13 +132,10 @@ public class JogadorController : ControllerBase
     [SwaggerResponse(404, "Jogador não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
-        var jogador = await _context.Jogadores.FindAsync(id);
+        var removido = await _jogadorService.DeleteAsync(id);
 
-        if (jogador == null)
+        if (!removido)
             return NotFound();
-
-        _context.Jogadores.Remove(jogador);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
