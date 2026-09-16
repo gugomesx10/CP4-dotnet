@@ -1,9 +1,7 @@
-﻿using CP4.Infrastructure.Data;
-using CP4.Application.DTOs;
-using CP4.Application.DTOs.Responses;
-using CP4.Domain.Entities;
+﻿using CP4.Application.DTOs;
+using CP4.Application.Interfaces.Services;
+using CP4.Application.Results;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace CP4.Controllers;
@@ -12,11 +10,12 @@ namespace CP4.Controllers;
 [Route("api/[controller]")]
 public class PerfilCompetitivoController : ControllerBase
 {
-    private readonly ApplicationContext _context;
+    private readonly IPerfilCompetitivoService _perfilService;
 
-    public PerfilCompetitivoController(ApplicationContext context)
+    public PerfilCompetitivoController(
+        IPerfilCompetitivoService perfilService)
     {
-        _context = context;
+        _perfilService = perfilService;
     }
 
     /// <summary>
@@ -27,39 +26,12 @@ public class PerfilCompetitivoController : ControllerBase
     [SwaggerResponse(204, "Nenhum perfil competitivo encontrado")]
     public async Task<IActionResult> GetAll()
     {
-        var perfis = await _context.PerfisCompetitivos
-            .Include(p => p.Jogador)
-            .ThenInclude(j => j!.Time)
-            .ToListAsync();
+        var perfis = await _perfilService.GetAllAsync();
 
         if (!perfis.Any())
             return NoContent();
 
-        var response = perfis.Select(p => new PerfilCompetitivoResponseDto
-        {
-            Id = p.Id,
-            KDA = p.KDA,
-            WinRate = p.WinRate,
-            HorasJogadas = p.HorasJogadas,
-            JogadorId = p.JogadorId,
-            Jogador = p.Jogador == null ? null : new JogadorResumoDto
-            {
-                Id = p.Jogador.Id,
-                Nickname = p.Jogador.Nickname,
-                Funcao = p.Jogador.Funcao,
-                Idade = p.Jogador.Idade,
-                Time = p.Jogador.Time == null ? null : new TimeResumoDto
-                {
-                    Id = p.Jogador.Time.Id,
-                    Nome = p.Jogador.Time.Nome,
-                    Jogo = p.Jogador.Time.Jogo,
-                    Pais = p.Jogador.Time.Pais,
-                    Ranking = p.Jogador.Time.Ranking
-                }
-            }
-        });
-
-        return Ok(response);
+        return Ok(perfis);
     }
 
     /// <summary>
@@ -70,39 +42,12 @@ public class PerfilCompetitivoController : ControllerBase
     [SwaggerResponse(404, "Perfil competitivo não encontrado")]
     public async Task<IActionResult> GetById(int id)
     {
-        var perfil = await _context.PerfisCompetitivos
-            .Include(p => p.Jogador)
-            .ThenInclude(j => j!.Time)
-            .FirstOrDefaultAsync(p => p.Id == id);
+        var perfil = await _perfilService.GetByIdAsync(id);
 
         if (perfil == null)
             return NotFound();
 
-        var response = new PerfilCompetitivoResponseDto
-        {
-            Id = perfil.Id,
-            KDA = perfil.KDA,
-            WinRate = perfil.WinRate,
-            HorasJogadas = perfil.HorasJogadas,
-            JogadorId = perfil.JogadorId,
-            Jogador = perfil.Jogador == null ? null : new JogadorResumoDto
-            {
-                Id = perfil.Jogador.Id,
-                Nickname = perfil.Jogador.Nickname,
-                Funcao = perfil.Jogador.Funcao,
-                Idade = perfil.Jogador.Idade,
-                Time = perfil.Jogador.Time == null ? null : new TimeResumoDto
-                {
-                    Id = perfil.Jogador.Time.Id,
-                    Nome = perfil.Jogador.Time.Nome,
-                    Jogo = perfil.Jogador.Time.Jogo,
-                    Pais = perfil.Jogador.Time.Pais,
-                    Ranking = perfil.Jogador.Time.Ranking
-                }
-            }
-        };
-
-        return Ok(response);
+        return Ok(perfil);
     }
 
     /// <summary>
@@ -113,39 +58,12 @@ public class PerfilCompetitivoController : ControllerBase
     [SwaggerResponse(404, "Perfil competitivo não encontrado para este jogador")]
     public async Task<IActionResult> GetByJogador(int jogadorId)
     {
-        var perfil = await _context.PerfisCompetitivos
-            .Include(p => p.Jogador)
-            .ThenInclude(j => j!.Time)
-            .FirstOrDefaultAsync(p => p.JogadorId == jogadorId);
+        var perfil = await _perfilService.GetByJogadorAsync(jogadorId);
 
         if (perfil == null)
             return NotFound();
 
-        var response = new PerfilCompetitivoResponseDto
-        {
-            Id = perfil.Id,
-            KDA = perfil.KDA,
-            WinRate = perfil.WinRate,
-            HorasJogadas = perfil.HorasJogadas,
-            JogadorId = perfil.JogadorId,
-            Jogador = perfil.Jogador == null ? null : new JogadorResumoDto
-            {
-                Id = perfil.Jogador.Id,
-                Nickname = perfil.Jogador.Nickname,
-                Funcao = perfil.Jogador.Funcao,
-                Idade = perfil.Jogador.Idade,
-                Time = perfil.Jogador.Time == null ? null : new TimeResumoDto
-                {
-                    Id = perfil.Jogador.Time.Id,
-                    Nome = perfil.Jogador.Time.Nome,
-                    Jogo = perfil.Jogador.Time.Jogo,
-                    Pais = perfil.Jogador.Time.Pais,
-                    Ranking = perfil.Jogador.Time.Ranking
-                }
-            }
-        };
-
-        return Ok(response);
+        return Ok(perfil);
     }
 
     /// <summary>
@@ -153,36 +71,33 @@ public class PerfilCompetitivoController : ControllerBase
     /// </summary>
     [HttpPost]
     [SwaggerResponse(201, "Perfil competitivo criado com sucesso")]
-    [SwaggerResponse(400, "Dados inválidos ou jogador já possui perfil")]
+    [SwaggerResponse(400, "Jogador já possui perfil competitivo")]
     [SwaggerResponse(404, "Jogador não encontrado")]
-    public async Task<IActionResult> Create(PerfilCompetitivoCreateDto dto)
+    public async Task<IActionResult> Create(
+        PerfilCompetitivoCreateDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var jogador = await _context.Jogadores.FirstOrDefaultAsync(j => j.Id == dto.JogadorId);
+        var result = await _perfilService.CreateAsync(dto);
 
-        if (jogador == null)
-            return NotFound("Jogador não encontrado.");
-
-        var perfilExistente = await _context.PerfisCompetitivos
-            .FirstOrDefaultAsync(p => p.JogadorId == dto.JogadorId);
-
-        if (perfilExistente != null)
-            return BadRequest("Este jogador já possui perfil competitivo.");
-
-        var perfil = new PerfilCompetitivo
+        if (result.Status ==
+            PerfilCompetitivoResultStatus.JogadorNaoEncontrado)
         {
-            KDA = dto.KDA,
-            WinRate = dto.WinRate,
-            HorasJogadas = dto.HorasJogadas,
-            JogadorId = dto.JogadorId
-        };
+            return NotFound("Jogador não encontrado.");
+        }
 
-        _context.PerfisCompetitivos.Add(perfil);
-        await _context.SaveChangesAsync();
+        if (result.Status ==
+            PerfilCompetitivoResultStatus.PerfilJaExiste)
+        {
+            return BadRequest(
+                "Este jogador já possui perfil competitivo.");
+        }
 
-        return CreatedAtAction(nameof(GetById), new { id = perfil.Id }, perfil);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Perfil!.Id },
+            result.Perfil);
     }
 
     /// <summary>
@@ -190,31 +105,37 @@ public class PerfilCompetitivoController : ControllerBase
     /// </summary>
     [HttpPut("{id}")]
     [SwaggerResponse(200, "Perfil competitivo atualizado com sucesso")]
-    [SwaggerResponse(400, "Dados inválidos")]
+    [SwaggerResponse(400, "Jogador já possui outro perfil competitivo")]
     [SwaggerResponse(404, "Perfil competitivo ou jogador não encontrado")]
-    public async Task<IActionResult> Update(int id, PerfilCompetitivoCreateDto dto)
+    public async Task<IActionResult> Update(
+        int id,
+        PerfilCompetitivoCreateDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var perfil = await _context.PerfisCompetitivos.FindAsync(id);
+        var result = await _perfilService.UpdateAsync(id, dto);
 
-        if (perfil == null)
+        if (result.Status ==
+            PerfilCompetitivoResultStatus.PerfilNaoEncontrado)
+        {
             return NotFound("Perfil competitivo não encontrado.");
+        }
 
-        var jogador = await _context.Jogadores.FirstOrDefaultAsync(j => j.Id == dto.JogadorId);
-
-        if (jogador == null)
+        if (result.Status ==
+            PerfilCompetitivoResultStatus.JogadorNaoEncontrado)
+        {
             return NotFound("Jogador não encontrado.");
+        }
 
-        perfil.KDA = dto.KDA;
-        perfil.WinRate = dto.WinRate;
-        perfil.HorasJogadas = dto.HorasJogadas;
-        perfil.JogadorId = dto.JogadorId;
+        if (result.Status ==
+            PerfilCompetitivoResultStatus.PerfilJaExiste)
+        {
+            return BadRequest(
+                "Este jogador já possui outro perfil competitivo.");
+        }
 
-        await _context.SaveChangesAsync();
-
-        return Ok(perfil);
+        return Ok(result.Perfil);
     }
 
     /// <summary>
@@ -225,13 +146,10 @@ public class PerfilCompetitivoController : ControllerBase
     [SwaggerResponse(404, "Perfil competitivo não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
-        var perfil = await _context.PerfisCompetitivos.FindAsync(id);
+        var removido = await _perfilService.DeleteAsync(id);
 
-        if (perfil == null)
+        if (!removido)
             return NotFound();
-
-        _context.PerfisCompetitivos.Remove(perfil);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

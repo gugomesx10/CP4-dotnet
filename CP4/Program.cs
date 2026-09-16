@@ -50,6 +50,8 @@ builder.Services.AddScoped<ITimeRepository, TimeRepository>();
 builder.Services.AddScoped<ITimeService, TimeService>();
 builder.Services.AddScoped<IJogadorRepository, JogadorRepository>();
 builder.Services.AddScoped<IJogadorService, JogadorService>();
+builder.Services.AddScoped<IPerfilCompetitivoRepository, PerfilCompetitivoRepository>();
+builder.Services.AddScoped<IPerfilCompetitivoService, PerfilCompetitivoService>();
 
 var app = builder.Build();
 
