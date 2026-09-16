@@ -5,6 +5,7 @@ using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
 using CP4.Application.Common;
 using CP4.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace CP4.Application.Services;
 
@@ -12,13 +13,16 @@ public class JogadorService : IJogadorService
 {
     private readonly IJogadorRepository _jogadorRepository;
     private readonly ITimeRepository _timeRepository;
+    private readonly ILogger<JogadorService> _logger;
 
     public JogadorService(
         IJogadorRepository jogadorRepository,
-        ITimeRepository timeRepository)
+        ITimeRepository timeRepository,
+        ILogger<JogadorService> logger)
     {
         _jogadorRepository = jogadorRepository;
         _timeRepository = timeRepository;
+        _logger = logger;
     }
 
     public async Task<PagedResult<JogadorResumoDto>> GetAllAsync(
@@ -80,11 +84,22 @@ public class JogadorService : IJogadorService
         var time = await _timeRepository.GetByIdAsync(dto.TimeId);
 
         if (time == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de criar jogador para o time inexistente {TimeId}",
+                dto.TimeId);
+
             return null;
+        }
 
         var jogador = JogadorMapper.ToEntity(dto);
 
         await _jogadorRepository.AddAsync(jogador);
+
+        _logger.LogInformation(
+            "Jogador {JogadorId} criado para o time {TimeId}",
+            jogador.Id,
+            dto.TimeId);
 
         return JogadorMapper.ToResumoDto(jogador, time);
     }
@@ -96,16 +111,34 @@ public class JogadorService : IJogadorService
         var jogador = await _jogadorRepository.GetByIdForUpdateAsync(id);
 
         if (jogador == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de atualizar jogador inexistente {JogadorId}",
+                id);
+
             return null;
+        }
 
         var time = await _timeRepository.GetByIdAsync(dto.TimeId);
 
         if (time == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de associar o jogador {JogadorId} ao time inexistente {TimeId}",
+                id,
+                dto.TimeId);
+
             return null;
+        }
 
         JogadorMapper.UpdateEntity(jogador, dto);
 
         await _jogadorRepository.UpdateAsync(jogador);
+
+        _logger.LogInformation(
+            "Jogador {JogadorId} atualizado para o time {TimeId}",
+            jogador.Id,
+            dto.TimeId);
 
         return JogadorMapper.ToResumoDto(jogador, time);
     }
@@ -115,9 +148,19 @@ public class JogadorService : IJogadorService
         var jogador = await _jogadorRepository.GetByIdForUpdateAsync(id);
 
         if (jogador == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de excluir jogador inexistente {JogadorId}",
+                id);
+
             return false;
+        }
 
         await _jogadorRepository.DeleteAsync(jogador);
+
+        _logger.LogInformation(
+            "Jogador {JogadorId} excluído",
+            id);
 
         return true;
     }

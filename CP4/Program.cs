@@ -9,8 +9,13 @@ using CP4.Application.Services;
 using CP4.Infrastructure.Repositories;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddApplicationInsightsTelemetry();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -47,6 +52,16 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
         builder.Configuration.GetConnectionString("OracleConnection")
     )
 );
+
+builder.Services.AddHealthChecks()
+    .AddCheck(
+        "api",
+        () => HealthCheckResult.Healthy("API disponível"))
+    .AddDbContextCheck<ApplicationContext>(
+        name: "oracle-database",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "database" });
+
 
 builder.Services.AddScoped<ITimeRepository, TimeRepository>();
 builder.Services.AddScoped<ITimeService, TimeService>();
@@ -104,5 +119,29 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+
+        var response = new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                description = entry.Value.Description,
+                durationMs = entry.Value.Duration.TotalMilliseconds
+            }),
+            totalDurationMs = report.TotalDuration.TotalMilliseconds
+        };
+
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(response));
+    }
+});
 
 app.Run();

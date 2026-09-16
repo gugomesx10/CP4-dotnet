@@ -1,19 +1,25 @@
-﻿using CP4.Application.DTOs;
+﻿using CP4.Application.Common;
+using CP4.Application.DTOs;
 using CP4.Application.DTOs.Responses;
 using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
-using CP4.Application.Common;
+using CP4.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace CP4.Application.Services;
 
 public class TimeService : ITimeService
 {
     private readonly ITimeRepository _timeRepository;
+    private readonly ILogger<TimeService> _logger;
 
-    public TimeService(ITimeRepository timeRepository)
+    public TimeService(
+        ITimeRepository timeRepository,
+        ILogger<TimeService> logger)
     {
         _timeRepository = timeRepository;
+        _logger = logger;
     }
 
     public async Task<PagedResult<TimeResumoDto>> GetAllAsync(
@@ -23,14 +29,7 @@ public class TimeService : ITimeService
         var result = await _timeRepository
             .GetAllAsync(pageNumber, pageSize);
 
-        return new PagedResult<TimeResumoDto>
-        {
-            Items = result.Items.Select(TimeMapper.ToResumoDto),
-            PageNumber = result.PageNumber,
-            PageSize = result.PageSize,
-            TotalItems = result.TotalItems,
-            TotalPages = result.TotalPages
-        };
+        return MapPagedResult(result);
     }
 
     public async Task<TimeResumoDto?> GetByIdAsync(int id)
@@ -50,14 +49,7 @@ public class TimeService : ITimeService
         var result = await _timeRepository
             .GetByJogoAsync(jogo, pageNumber, pageSize);
 
-        return new PagedResult<TimeResumoDto>
-        {
-            Items = result.Items.Select(TimeMapper.ToResumoDto),
-            PageNumber = result.PageNumber,
-            PageSize = result.PageSize,
-            TotalItems = result.TotalItems,
-            TotalPages = result.TotalPages
-        };
+        return MapPagedResult(result);
     }
 
     public async Task<TimeResumoDto> CreateAsync(TimeCreateDto dto)
@@ -66,19 +58,36 @@ public class TimeService : ITimeService
 
         await _timeRepository.AddAsync(time);
 
+        _logger.LogInformation(
+            "Time {TimeId} criado para o jogo {Jogo}",
+            time.Id,
+            time.Jogo);
+
         return TimeMapper.ToResumoDto(time);
     }
 
-    public async Task<TimeResumoDto?> UpdateAsync(int id, TimeCreateDto dto)
+    public async Task<TimeResumoDto?> UpdateAsync(
+        int id,
+        TimeCreateDto dto)
     {
         var time = await _timeRepository.GetByIdAsync(id);
 
         if (time == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de atualizar time inexistente {TimeId}",
+                id);
+
             return null;
+        }
 
         TimeMapper.UpdateEntity(time, dto);
 
         await _timeRepository.UpdateAsync(time);
+
+        _logger.LogInformation(
+            "Time {TimeId} atualizado",
+            time.Id);
 
         return TimeMapper.ToResumoDto(time);
     }
@@ -88,10 +97,33 @@ public class TimeService : ITimeService
         var time = await _timeRepository.GetByIdAsync(id);
 
         if (time == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de excluir time inexistente {TimeId}",
+                id);
+
             return false;
+        }
 
         await _timeRepository.DeleteAsync(time);
 
+        _logger.LogInformation(
+            "Time {TimeId} excluído",
+            id);
+
         return true;
+    }
+
+    private static PagedResult<TimeResumoDto> MapPagedResult(
+        PagedResult<Time> result)
+    {
+        return new PagedResult<TimeResumoDto>
+        {
+            Items = result.Items.Select(TimeMapper.ToResumoDto),
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
+        };
     }
 }

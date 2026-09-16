@@ -1,10 +1,11 @@
-﻿using CP4.Application.DTOs;
+﻿using CP4.Application.Common;
+using CP4.Application.DTOs;
 using CP4.Application.DTOs.Responses;
 using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
 using CP4.Application.Results;
-using CP4.Application.Common;
+using Microsoft.Extensions.Logging;
 
 namespace CP4.Application.Services;
 
@@ -12,13 +13,16 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 {
     private readonly IPerfilCompetitivoRepository _perfilRepository;
     private readonly IJogadorRepository _jogadorRepository;
+    private readonly ILogger<PerfilCompetitivoService> _logger;
 
     public PerfilCompetitivoService(
         IPerfilCompetitivoRepository perfilRepository,
-        IJogadorRepository jogadorRepository)
+        IJogadorRepository jogadorRepository,
+        ILogger<PerfilCompetitivoService> logger)
     {
         _perfilRepository = perfilRepository;
         _jogadorRepository = jogadorRepository;
+        _logger = logger;
     }
 
     public async Task<PagedResult<PerfilCompetitivoResponseDto>> GetAllAsync(
@@ -66,6 +70,10 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 
         if (jogador == null)
         {
+            _logger.LogWarning(
+                "Tentativa de criar perfil competitivo para o jogador inexistente {JogadorId}",
+                dto.JogadorId);
+
             return new PerfilCompetitivoResult(
                 PerfilCompetitivoResultStatus.JogadorNaoEncontrado);
         }
@@ -75,6 +83,10 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 
         if (perfilJaExiste)
         {
+            _logger.LogWarning(
+                "Jogador {JogadorId} já possui perfil competitivo",
+                dto.JogadorId);
+
             return new PerfilCompetitivoResult(
                 PerfilCompetitivoResultStatus.PerfilJaExiste);
         }
@@ -82,6 +94,11 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
         var perfil = PerfilCompetitivoMapper.ToEntity(dto);
 
         await _perfilRepository.AddAsync(perfil);
+
+        _logger.LogInformation(
+            "Perfil competitivo {PerfilId} criado para o jogador {JogadorId}",
+            perfil.Id,
+            dto.JogadorId);
 
         return new PerfilCompetitivoResult(
             PerfilCompetitivoResultStatus.Sucesso,
@@ -96,6 +113,10 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 
         if (perfil == null)
         {
+            _logger.LogWarning(
+                "Tentativa de atualizar perfil competitivo inexistente {PerfilId}",
+                id);
+
             return new PerfilCompetitivoResult(
                 PerfilCompetitivoResultStatus.PerfilNaoEncontrado);
         }
@@ -104,6 +125,11 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 
         if (jogador == null)
         {
+            _logger.LogWarning(
+                "Tentativa de associar o perfil {PerfilId} ao jogador inexistente {JogadorId}",
+                id,
+                dto.JogadorId);
+
             return new PerfilCompetitivoResult(
                 PerfilCompetitivoResultStatus.JogadorNaoEncontrado);
         }
@@ -115,6 +141,10 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
 
         if (perfilJaExiste)
         {
+            _logger.LogWarning(
+                "Jogador {JogadorId} já possui outro perfil competitivo",
+                dto.JogadorId);
+
             return new PerfilCompetitivoResult(
                 PerfilCompetitivoResultStatus.PerfilJaExiste);
         }
@@ -122,6 +152,11 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
         PerfilCompetitivoMapper.UpdateEntity(perfil, dto);
 
         await _perfilRepository.UpdateAsync(perfil);
+
+        _logger.LogInformation(
+            "Perfil competitivo {PerfilId} atualizado para o jogador {JogadorId}",
+            perfil.Id,
+            dto.JogadorId);
 
         return new PerfilCompetitivoResult(
             PerfilCompetitivoResultStatus.Sucesso,
@@ -133,9 +168,19 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
         var perfil = await _perfilRepository.GetByIdForUpdateAsync(id);
 
         if (perfil == null)
+        {
+            _logger.LogWarning(
+                "Tentativa de excluir perfil competitivo inexistente {PerfilId}",
+                id);
+
             return false;
+        }
 
         await _perfilRepository.DeleteAsync(perfil);
+
+        _logger.LogInformation(
+            "Perfil competitivo {PerfilId} excluído",
+            id);
 
         return true;
     }
