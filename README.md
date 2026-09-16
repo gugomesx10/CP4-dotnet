@@ -8,7 +8,7 @@ Projeto desenvolvido para o **CP4 - Advanced Business Development with .NET - FI
 
 ## 👨‍🎓 Informações Acadêmicas
 
-> **Checkpoint 2 — FIAP**
+> **Checkpoint 4 — FIAP**
 >
 > **Turma:** 2TDSPO
 >
