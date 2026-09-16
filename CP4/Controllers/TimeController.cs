@@ -22,11 +22,20 @@ public class TimeController : ControllerBase
     [HttpGet]
     [SwaggerResponse(200, "Times encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum time encontrado")]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var times = await _timeService.GetAllAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest("PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!times.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var times = await _timeService.GetAllAsync(
+            pageNumber,
+            pageSize);
+
+        if (!times.Items.Any())
             return NoContent();
 
         return Ok(times);
@@ -52,13 +61,23 @@ public class TimeController : ControllerBase
     /// Retorna times filtrados pelo jogo.
     /// </summary>
     [HttpGet("jogo/{jogo}")]
-    [SwaggerResponse(200, "Times encontrados com sucesso")]
-    [SwaggerResponse(204, "Nenhum time encontrado para este jogo")]
-    public async Task<IActionResult> GetByJogo(string jogo)
+    public async Task<IActionResult> GetByJogo(
+        string jogo,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var times = await _timeService.GetByJogoAsync(jogo);
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!times.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var times = await _timeService.GetByJogoAsync(
+            jogo,
+            pageNumber,
+            pageSize);
+
+        if (!times.Items.Any())
             return NoContent();
 
         return Ok(times);

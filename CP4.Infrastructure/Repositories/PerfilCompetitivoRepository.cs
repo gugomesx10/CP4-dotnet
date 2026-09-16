@@ -1,4 +1,5 @@
-﻿using CP4.Application.Interfaces.Repositories;
+﻿using CP4.Application.Common;
+using CP4.Application.Interfaces.Repositories;
 using CP4.Domain.Entities;
 using CP4.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -14,13 +15,32 @@ public class PerfilCompetitivoRepository : IPerfilCompetitivoRepository
         _context = context;
     }
 
-    public async Task<List<PerfilCompetitivo>> GetAllAsync()
+    public async Task<PagedResult<PerfilCompetitivo>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.PerfisCompetitivos
+        var query = _context.PerfisCompetitivos
             .AsNoTracking()
             .Include(p => p.Jogador)
-            .ThenInclude(j => j!.Time)
+            .ThenInclude(j => j!.Time);
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(p => p.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<PerfilCompetitivo>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize)
+        };
     }
 
     public async Task<PerfilCompetitivo?> GetByIdAsync(int id)

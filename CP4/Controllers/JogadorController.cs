@@ -22,11 +22,20 @@ public class JogadorController : ControllerBase
     [HttpGet]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado")]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _jogadorService.GetAllAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetAllAsync(pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
         return Ok(jogadores);
@@ -54,11 +63,21 @@ public class JogadorController : ControllerBase
     [HttpGet("time/{timeId}")]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado para este time")]
-    public async Task<IActionResult> GetByTime(int timeId)
+    public async Task<IActionResult> GetByTime(
+        int timeId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _jogadorService.GetByTimeAsync(timeId);
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetByTimeAsync(timeId, pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
         return Ok(jogadores);
@@ -70,11 +89,21 @@ public class JogadorController : ControllerBase
     [HttpGet("funcao/{funcao}")]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado para esta função")]
-    public async Task<IActionResult> GetByFuncao(string funcao)
+    public async Task<IActionResult> GetByFuncao(
+        string funcao,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _jogadorService.GetByFuncaoAsync(funcao);
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetByFuncaoAsync(funcao, pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
         return Ok(jogadores);

@@ -3,6 +3,7 @@ using CP4.Application.DTOs.Responses;
 using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
+using CP4.Application.Common;
 
 namespace CP4.Application.Services;
 
@@ -15,11 +16,21 @@ public class TimeService : ITimeService
         _timeRepository = timeRepository;
     }
 
-    public async Task<IEnumerable<TimeResumoDto>> GetAllAsync()
+    public async Task<PagedResult<TimeResumoDto>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        var times = await _timeRepository.GetAllAsync();
+        var result = await _timeRepository
+            .GetAllAsync(pageNumber, pageSize);
 
-        return times.Select(TimeMapper.ToResumoDto);
+        return new PagedResult<TimeResumoDto>
+        {
+            Items = result.Items.Select(TimeMapper.ToResumoDto),
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
+        };
     }
 
     public async Task<TimeResumoDto?> GetByIdAsync(int id)
@@ -31,11 +42,22 @@ public class TimeService : ITimeService
             : TimeMapper.ToResumoDto(time);
     }
 
-    public async Task<IEnumerable<TimeResumoDto>> GetByJogoAsync(string jogo)
+    public async Task<PagedResult<TimeResumoDto>> GetByJogoAsync(
+        string jogo,
+        int pageNumber,
+        int pageSize)
     {
-        var times = await _timeRepository.GetByJogoAsync(jogo);
+        var result = await _timeRepository
+            .GetByJogoAsync(jogo, pageNumber, pageSize);
 
-        return times.Select(TimeMapper.ToResumoDto);
+        return new PagedResult<TimeResumoDto>
+        {
+            Items = result.Items.Select(TimeMapper.ToResumoDto),
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
+        };
     }
 
     public async Task<TimeResumoDto> CreateAsync(TimeCreateDto dto)

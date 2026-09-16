@@ -2,6 +2,7 @@
 using CP4.Domain.Entities;
 using CP4.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using CP4.Application.Common;
 
 namespace CP4.Infrastructure.Repositories;
 
@@ -14,11 +15,29 @@ public class TimeRepository : ITimeRepository
         _context = context;
     }
 
-    public async Task<List<Time>> GetAllAsync()
+    public async Task<PagedResult<Time>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.Times
-            .AsNoTracking()
+        var query = _context.Times.AsNoTracking();
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(t => t.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<Time>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize)
+        };
     }
 
     public async Task<Time?> GetByIdAsync(int id)
@@ -28,12 +47,32 @@ public class TimeRepository : ITimeRepository
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
-    public async Task<List<Time>> GetByJogoAsync(string jogo)
+    public async Task<PagedResult<Time>> GetByJogoAsync(
+        string jogo,
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.Times
+        var query = _context.Times
             .AsNoTracking()
-            .Where(t => t.Jogo.ToLower() == jogo.ToLower())
+            .Where(t => t.Jogo.ToLower() == jogo.ToLower());
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(t => t.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return new PagedResult<Time>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize)
+        };
     }
 
     public async Task AddAsync(Time time)

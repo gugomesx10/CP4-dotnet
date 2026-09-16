@@ -4,6 +4,7 @@ using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
 using CP4.Application.Results;
+using CP4.Application.Common;
 
 namespace CP4.Application.Services;
 
@@ -20,11 +21,23 @@ public class PerfilCompetitivoService : IPerfilCompetitivoService
         _jogadorRepository = jogadorRepository;
     }
 
-    public async Task<IEnumerable<PerfilCompetitivoResponseDto>> GetAllAsync()
+    public async Task<PagedResult<PerfilCompetitivoResponseDto>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        var perfis = await _perfilRepository.GetAllAsync();
+        var result = await _perfilRepository
+            .GetAllAsync(pageNumber, pageSize);
 
-        return perfis.Select(PerfilCompetitivoMapper.ToResponseDto);
+        return new PagedResult<PerfilCompetitivoResponseDto>
+        {
+            Items = result.Items.Select(
+                PerfilCompetitivoMapper.ToResponseDto),
+
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
+        };
     }
 
     public async Task<PerfilCompetitivoResponseDto?> GetByIdAsync(int id)

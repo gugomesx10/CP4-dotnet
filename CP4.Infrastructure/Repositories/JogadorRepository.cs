@@ -2,6 +2,7 @@
 using CP4.Domain.Entities;
 using CP4.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using CP4.Application.Common;
 
 namespace CP4.Infrastructure.Repositories;
 
@@ -14,12 +15,27 @@ public class JogadorRepository : IJogadorRepository
         _context = context;
     }
 
-    public async Task<List<Jogador>> GetAllAsync()
+    public async Task<PagedResult<Jogador>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.Jogadores
+        var query = _context.Jogadores
             .AsNoTracking()
-            .Include(j => j.Time)
+            .Include(j => j.Time);
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(j => j.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return CriarResultado(
+            items,
+            pageNumber,
+            pageSize,
+            totalItems);
     }
 
     public async Task<Jogador?> GetByIdAsync(int id)
@@ -36,22 +52,71 @@ public class JogadorRepository : IJogadorRepository
             .FirstOrDefaultAsync(j => j.Id == id);
     }
 
-    public async Task<List<Jogador>> GetByTimeAsync(int timeId)
+    public async Task<PagedResult<Jogador>> GetByTimeAsync(
+        int timeId,
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.Jogadores
+        var query = _context.Jogadores
             .AsNoTracking()
             .Include(j => j.Time)
-            .Where(j => j.TimeId == timeId)
+            .Where(j => j.TimeId == timeId);
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(j => j.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return CriarResultado(
+            items,
+            pageNumber,
+            pageSize,
+            totalItems);
     }
 
-    public async Task<List<Jogador>> GetByFuncaoAsync(string funcao)
+    public async Task<PagedResult<Jogador>> GetByFuncaoAsync(
+        string funcao,
+        int pageNumber,
+        int pageSize)
     {
-        return await _context.Jogadores
+        var query = _context.Jogadores
             .AsNoTracking()
             .Include(j => j.Time)
-            .Where(j => j.Funcao.ToLower() == funcao.ToLower())
+            .Where(j => j.Funcao.ToLower() == funcao.ToLower());
+
+        var totalItems = await query.CountAsync();
+
+        var items = await query
+            .OrderBy(j => j.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        return CriarResultado(
+            items,
+            pageNumber,
+            pageSize,
+            totalItems);
+    }
+    
+    private static PagedResult<Jogador> CriarResultado(
+        List<Jogador> items,
+        int pageNumber,
+        int pageSize,
+        int totalItems)
+    {
+        return new PagedResult<Jogador>
+        {
+            Items = items,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = (int)Math.Ceiling(
+                totalItems / (double)pageSize)
+        };
     }
 
     public async Task AddAsync(Jogador jogador)

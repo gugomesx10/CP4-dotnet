@@ -18,17 +18,24 @@ public class PerfilCompetitivoController : ControllerBase
         _perfilService = perfilService;
     }
 
-    /// <summary>
-    /// Retorna todos os perfis competitivos com seus jogadores.
-    /// </summary>
     [HttpGet]
     [SwaggerResponse(200, "Perfis competitivos encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum perfil competitivo encontrado")]
-    public async Task<IActionResult> GetAll()
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var perfis = await _perfilService.GetAllAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!perfis.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var perfis = await _perfilService
+            .GetAllAsync(pageNumber, pageSize);
+
+        if (!perfis.Items.Any())
             return NoContent();
 
         return Ok(perfis);

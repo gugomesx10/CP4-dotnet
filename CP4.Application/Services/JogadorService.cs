@@ -3,6 +3,8 @@ using CP4.Application.DTOs.Responses;
 using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Mappings;
+using CP4.Application.Common;
+using CP4.Domain.Entities;
 
 namespace CP4.Application.Services;
 
@@ -19,11 +21,14 @@ public class JogadorService : IJogadorService
         _timeRepository = timeRepository;
     }
 
-    public async Task<IEnumerable<JogadorResumoDto>> GetAllAsync()
+    public async Task<PagedResult<JogadorResumoDto>> GetAllAsync(
+        int pageNumber,
+        int pageSize)
     {
-        var jogadores = await _jogadorRepository.GetAllAsync();
+        var result = await _jogadorRepository
+            .GetAllAsync(pageNumber, pageSize);
 
-        return jogadores.Select(JogadorMapper.ToResumoDto);
+        return MapPagedResult(result);
     }
 
     public async Task<JogadorResumoDto?> GetByIdAsync(int id)
@@ -35,18 +40,39 @@ public class JogadorService : IJogadorService
             : JogadorMapper.ToResumoDto(jogador);
     }
 
-    public async Task<IEnumerable<JogadorResumoDto>> GetByTimeAsync(int timeId)
+    public async Task<PagedResult<JogadorResumoDto>> GetByTimeAsync(
+        int timeId,
+        int pageNumber,
+        int pageSize)
     {
-        var jogadores = await _jogadorRepository.GetByTimeAsync(timeId);
+        var result = await _jogadorRepository
+            .GetByTimeAsync(timeId, pageNumber, pageSize);
 
-        return jogadores.Select(JogadorMapper.ToResumoDto);
+        return MapPagedResult(result);
     }
 
-    public async Task<IEnumerable<JogadorResumoDto>> GetByFuncaoAsync(string funcao)
+    public async Task<PagedResult<JogadorResumoDto>> GetByFuncaoAsync(
+        string funcao,
+        int pageNumber,
+        int pageSize)
     {
-        var jogadores = await _jogadorRepository.GetByFuncaoAsync(funcao);
+        var result = await _jogadorRepository
+            .GetByFuncaoAsync(funcao, pageNumber, pageSize);
 
-        return jogadores.Select(JogadorMapper.ToResumoDto);
+        return MapPagedResult(result);
+    }
+
+    private static PagedResult<JogadorResumoDto> MapPagedResult(
+        PagedResult<Jogador> result)
+    {
+        return new PagedResult<JogadorResumoDto>
+        {
+            Items = result.Items.Select(JogadorMapper.ToResumoDto),
+            PageNumber = result.PageNumber,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            TotalPages = result.TotalPages
+        };
     }
 
     public async Task<JogadorResumoDto?> CreateAsync(JogadorCreateDto dto)
