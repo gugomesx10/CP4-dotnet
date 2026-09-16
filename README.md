@@ -4,7 +4,7 @@
 
 A **ArenaSync API** é uma API RESTful desenvolvida em **ASP.NET Core .NET 8**, com foco no gerenciamento de times competitivos de e-sports, jogadores e perfis competitivos.
 
-O projeto foi desenvolvido como parte do **CP3 - Advanced Business Development with .NET - 2026**, aplicando conceitos avançados de:
+O projeto foi desenvolvido como parte do **CP4 - Advanced Business Development with .NET - 2026**, aplicando conceitos avançados de:
 
 - APIs RESTful
 - Entity Framework Core
