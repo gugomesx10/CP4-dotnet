@@ -21,7 +21,7 @@ namespace CP4.Migrations
 
             OracleModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("CP4.Entities.Jogador", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.Jogador", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -47,12 +47,14 @@ namespace CP4.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Funcao");
+
                     b.HasIndex("TimeId");
 
                     b.ToTable("Jogadores");
                 });
 
-            modelBuilder.Entity("CP4.Entities.PerfilCompetitivo", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.PerfilCompetitivo", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -80,7 +82,7 @@ namespace CP4.Migrations
                     b.ToTable("PerfisCompetitivos");
                 });
 
-            modelBuilder.Entity("CP4.Entities.Time", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.Time", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -108,12 +110,14 @@ namespace CP4.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Jogo");
+
                     b.ToTable("Times");
                 });
 
-            modelBuilder.Entity("CP4.Entities.Jogador", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.Jogador", b =>
                 {
-                    b.HasOne("CP4.Entities.Time", "Time")
+                    b.HasOne("CP4.Domain.Entities.Time", "Time")
                         .WithMany("Jogadores")
                         .HasForeignKey("TimeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -122,23 +126,23 @@ namespace CP4.Migrations
                     b.Navigation("Time");
                 });
 
-            modelBuilder.Entity("CP4.Entities.PerfilCompetitivo", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.PerfilCompetitivo", b =>
                 {
-                    b.HasOne("CP4.Entities.Jogador", "Jogador")
+                    b.HasOne("CP4.Domain.Entities.Jogador", "Jogador")
                         .WithOne("PerfilCompetitivo")
-                        .HasForeignKey("CP4.Entities.PerfilCompetitivo", "JogadorId")
+                        .HasForeignKey("CP4.Domain.Entities.PerfilCompetitivo", "JogadorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Jogador");
                 });
 
-            modelBuilder.Entity("CP4.Entities.Jogador", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.Jogador", b =>
                 {
                     b.Navigation("PerfilCompetitivo");
                 });
 
-            modelBuilder.Entity("CP4.Entities.Time", b =>
+            modelBuilder.Entity("CP4.Domain.Entities.Time", b =>
                 {
                     b.Navigation("Jogadores");
                 });

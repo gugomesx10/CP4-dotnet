@@ -1,9 +1,6 @@
-﻿using CP4.Infrastructure.Data;
-using CP4.Application.DTOs;
-using CP4.Application.DTOs.Responses;
-using CP4.Domain.Entities;
+﻿using CP4.Application.DTOs;
+using CP4.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace CP4.Controllers;
@@ -12,155 +9,133 @@ namespace CP4.Controllers;
 [Route("api/[controller]")]
 public class JogadorController : ControllerBase
 {
-    private readonly ApplicationContext _context;
+    private readonly IJogadorService _jogadorService;
 
-    public JogadorController(ApplicationContext context)
+    public JogadorController(IJogadorService jogadorService)
     {
-        _context = context;
+        _jogadorService = jogadorService;
     }
 
     /// <summary>
-    /// Retorna todos os jogadores cadastrados com seus times e perfis competitivos.
+    /// Retorna todos os jogadores cadastrados com seus times.
     /// </summary>
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Lista os jogadores",
+        Description = "Retorna os jogadores cadastrados de forma paginada.",
+        OperationId = "GetJogadores")]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado")]
-    public async Task<IActionResult> GetAll()
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .ToListAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetAllAsync(pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
     /// Retorna um jogador pelo ID.
     /// </summary>
     [HttpGet("{id}")]
+    [SwaggerOperation(
+        Summary = "Busca um jogador por ID",
+        Description = "Retorna o jogador e as informações resumidas do seu time.",
+        OperationId = "GetJogadorById")]
     [SwaggerResponse(200, "Jogador encontrado com sucesso")]
     [SwaggerResponse(404, "Jogador não encontrado")]
     public async Task<IActionResult> GetById(int id)
     {
-        var jogador = await _context.Jogadores
-            .Include(j => j.Time)
-            .FirstOrDefaultAsync(j => j.Id == id);
+        var jogador = await _jogadorService.GetByIdAsync(id);
 
         if (jogador == null)
             return NotFound();
 
-        var response = new JogadorResumoDto
-        {
-            Id = jogador.Id,
-            Nickname = jogador.Nickname,
-            Funcao = jogador.Funcao,
-            Idade = jogador.Idade,
-            Time = jogador.Time == null ? null : new TimeResumoDto
-            {
-                Id = jogador.Time.Id,
-                Nome = jogador.Time.Nome,
-                Jogo = jogador.Time.Jogo,
-                Pais = jogador.Time.Pais,
-                Ranking = jogador.Time.Ranking
-            }
-        };
-
-        return Ok(response);
+        return Ok(jogador);
     }
 
     /// <summary>
     /// Retorna jogadores filtrados pelo ID do time.
     /// </summary>
     [HttpGet("time/{timeId}")]
+    [SwaggerOperation(
+        Summary = "Busca jogadores por time",
+        Description = "Retorna de forma paginada os jogadores vinculados ao time informado.",
+        OperationId = "GetJogadoresByTime")]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado para este time")]
-    public async Task<IActionResult> GetByTime(int timeId)
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetByTime(
+        int timeId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .Where(j => j.TimeId == timeId)
-            .ToListAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetByTimeAsync(timeId, pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
     /// Retorna jogadores filtrados pela função.
     /// </summary>
     [HttpGet("funcao/{funcao}")]
+    [SwaggerOperation(
+        Summary = "Busca jogadores por função",
+        Description = "Filtra os jogadores pela função e retorna o resultado de forma paginada.",
+        OperationId = "GetJogadoresByFuncao")]
     [SwaggerResponse(200, "Jogadores encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum jogador encontrado para esta função")]
-    public async Task<IActionResult> GetByFuncao(string funcao)
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetByFuncao(
+        string funcao,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var jogadores = await _context.Jogadores
-            .Include(j => j.Time)
-            .Where(j => j.Funcao.ToLower() == funcao.ToLower())
-            .ToListAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!jogadores.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var jogadores = await _jogadorService
+            .GetByFuncaoAsync(funcao, pageNumber, pageSize);
+
+        if (!jogadores.Items.Any())
             return NoContent();
 
-        var response = jogadores.Select(j => new JogadorResumoDto
-        {
-            Id = j.Id,
-            Nickname = j.Nickname,
-            Funcao = j.Funcao,
-            Idade = j.Idade,
-            Time = j.Time == null ? null : new TimeResumoDto
-            {
-                Id = j.Time.Id,
-                Nome = j.Time.Nome,
-                Jogo = j.Time.Jogo,
-                Pais = j.Time.Pais,
-                Ranking = j.Time.Ranking
-            }
-        });
-
-        return Ok(response);
+        return Ok(jogadores);
     }
 
     /// <summary>
     /// Cadastra um novo jogador vinculado a um time.
     /// </summary>
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Cadastra um jogador",
+        Description = "Cria um jogador e o associa a um time existente.",
+        OperationId = "CreateJogador")]
     [SwaggerResponse(201, "Jogador criado com sucesso")]
     [SwaggerResponse(400, "Dados inválidos")]
     [SwaggerResponse(404, "Time não encontrado")]
@@ -169,53 +144,39 @@ public class JogadorController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = await _context.Times.FirstOrDefaultAsync(t => t.Id == dto.TimeId);
+        var jogador = await _jogadorService.CreateAsync(dto);
 
-        if (time == null)
+        if (jogador == null)
             return NotFound("Time não encontrado.");
 
-        var jogador = new Jogador
-        {
-            Nickname = dto.Nickname,
-            Funcao = dto.Funcao,
-            Idade = dto.Idade,
-            TimeId = dto.TimeId
-        };
-
-        _context.Jogadores.Add(jogador);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = jogador.Id }, jogador);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = jogador.Id },
+            jogador);
     }
 
     /// <summary>
     /// Atualiza um jogador existente.
     /// </summary>
     [HttpPut("{id}")]
+    [SwaggerOperation(
+        Summary = "Atualiza um jogador",
+        Description = "Atualiza os dados do jogador e sua associação com o time.",
+        OperationId = "UpdateJogador")]
     [SwaggerResponse(200, "Jogador atualizado com sucesso")]
     [SwaggerResponse(400, "Dados inválidos")]
     [SwaggerResponse(404, "Jogador ou time não encontrado")]
-    public async Task<IActionResult> Update(int id, JogadorCreateDto dto)
+    public async Task<IActionResult> Update(
+        int id,
+        JogadorCreateDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var jogador = await _context.Jogadores.FindAsync(id);
+        var jogador = await _jogadorService.UpdateAsync(id, dto);
 
         if (jogador == null)
-            return NotFound("Jogador não encontrado.");
-
-        var time = await _context.Times.FirstOrDefaultAsync(t => t.Id == dto.TimeId);
-
-        if (time == null)
-            return NotFound("Time não encontrado.");
-
-        jogador.Nickname = dto.Nickname;
-        jogador.Funcao = dto.Funcao;
-        jogador.Idade = dto.Idade;
-        jogador.TimeId = dto.TimeId;
-
-        await _context.SaveChangesAsync();
+            return NotFound("Jogador ou time não encontrado.");
 
         return Ok(jogador);
     }
@@ -224,17 +185,18 @@ public class JogadorController : ControllerBase
     /// Remove um jogador pelo ID.
     /// </summary>
     [HttpDelete("{id}")]
+    [SwaggerOperation(
+        Summary = "Remove um jogador",
+        Description = "Exclui o jogador identificado pelo ID.",
+        OperationId = "DeleteJogador")]
     [SwaggerResponse(204, "Jogador removido com sucesso")]
     [SwaggerResponse(404, "Jogador não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
-        var jogador = await _context.Jogadores.FindAsync(id);
+        var removido = await _jogadorService.DeleteAsync(id);
 
-        if (jogador == null)
+        if (!removido)
             return NotFound();
-
-        _context.Jogadores.Remove(jogador);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

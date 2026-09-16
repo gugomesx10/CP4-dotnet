@@ -1,9 +1,6 @@
-﻿using CP4.Infrastructure.Data;
-using CP4.Application.DTOs;
-using CP4.Application.DTOs.Responses;
-using CP4.Domain.Entities;
+﻿using CP4.Application.DTOs;
+using CP4.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace CP4.Controllers;
@@ -12,95 +9,105 @@ namespace CP4.Controllers;
 [Route("api/[controller]")]
 public class TimeController : ControllerBase
 {
-    private readonly ApplicationContext _context;
+    private readonly ITimeService _timeService;
 
-    public TimeController(ApplicationContext context)
+    public TimeController(ITimeService timeService)
     {
-        _context = context;
+        _timeService = timeService;
     }
 
     /// <summary>
-    /// Retorna todos os times cadastrados com seus jogadores.
+    /// Retorna todos os times cadastrados.
     /// </summary>
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Lista os times",
+        Description = "Retorna os times cadastrados de forma paginada.",
+        OperationId = "GetTimes")]
     [SwaggerResponse(200, "Times encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum time encontrado")]
-    public async Task<IActionResult> GetAll()
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var times = await _context.Times.ToListAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!times.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var times = await _timeService.GetAllAsync(
+            pageNumber,
+            pageSize);
+
+        if (!times.Items.Any())
             return NoContent();
 
-        var response = times.Select(t => new TimeResumoDto
-        {
-            Id = t.Id,
-            Nome = t.Nome,
-            Jogo = t.Jogo,
-            Pais = t.Pais,
-            Ranking = t.Ranking
-        });
-
-        return Ok(response);
+        return Ok(times);
     }
 
     /// <summary>
     /// Retorna um time pelo ID.
     /// </summary>
     [HttpGet("{id}")]
+    [SwaggerOperation(
+        Summary = "Busca um time por ID",
+        Description = "Retorna os dados de um time específico.",
+        OperationId = "GetTimeById")]
     [SwaggerResponse(200, "Time encontrado com sucesso")]
     [SwaggerResponse(404, "Time não encontrado")]
     public async Task<IActionResult> GetById(int id)
     {
-        var time = await _context.Times
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var time = await _timeService.GetByIdAsync(id);
 
         if (time == null)
             return NotFound();
 
-        var response = new TimeResumoDto
-        {
-            Id = time.Id,
-            Nome = time.Nome,
-            Jogo = time.Jogo,
-            Pais = time.Pais,
-            Ranking = time.Ranking
-        };
-
-        return Ok(response);
+        return Ok(time);
     }
 
     /// <summary>
     /// Retorna times filtrados pelo jogo.
     /// </summary>
     [HttpGet("jogo/{jogo}")]
+    [SwaggerOperation(
+        Summary = "Busca times por jogo",
+        Description = "Filtra os times pelo jogo e retorna o resultado de forma paginada.",
+        OperationId = "GetTimesByJogo")]
     [SwaggerResponse(200, "Times encontrados com sucesso")]
-    [SwaggerResponse(204, "Nenhum time encontrado para este jogo")]
-    public async Task<IActionResult> GetByJogo(string jogo)
+    [SwaggerResponse(204, "Nenhum time encontrado para o jogo")]
+    [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
+    public async Task<IActionResult> GetByJogo(
+        string jogo,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var times = await _context.Times
-            .Where(t => t.Jogo.ToLower() == jogo.ToLower())
-            .ToListAsync();
+        if (pageNumber < 1 || pageSize < 1)
+            return BadRequest(
+                "PageNumber e PageSize devem ser maiores que zero.");
 
-        if (!times.Any())
+        pageSize = Math.Min(pageSize, 100);
+
+        var times = await _timeService.GetByJogoAsync(
+            jogo,
+            pageNumber,
+            pageSize);
+
+        if (!times.Items.Any())
             return NoContent();
 
-        var response = times.Select(t => new TimeResumoDto
-        {
-            Id = t.Id,
-            Nome = t.Nome,
-            Jogo = t.Jogo,
-            Pais = t.Pais,
-            Ranking = t.Ranking
-        });
-
-        return Ok(response);
+        return Ok(times);
     }
 
     /// <summary>
     /// Cadastra um novo time.
     /// </summary>
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Cadastra um time",
+        Description = "Cria um novo time competitivo.",
+        OperationId = "CreateTime")]
     [SwaggerResponse(201, "Time criado com sucesso")]
     [SwaggerResponse(400, "Dados inválidos")]
     public async Task<IActionResult> Create(TimeCreateDto dto)
@@ -108,43 +115,36 @@ public class TimeController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = new Time
-        {
-            Nome = dto.Nome,
-            Jogo = dto.Jogo,
-            Pais = dto.Pais,
-            Ranking = dto.Ranking
-        };
+        var time = await _timeService.CreateAsync(dto);
 
-        _context.Times.Add(time);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = time.Id }, time);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = time.Id },
+            time);
     }
 
     /// <summary>
     /// Atualiza um time existente.
     /// </summary>
     [HttpPut("{id}")]
+    [SwaggerOperation(
+        Summary = "Atualiza um time",
+        Description = "Atualiza os dados de um time existente.",
+        OperationId = "UpdateTime")]
     [SwaggerResponse(200, "Time atualizado com sucesso")]
     [SwaggerResponse(400, "Dados inválidos")]
     [SwaggerResponse(404, "Time não encontrado")]
-    public async Task<IActionResult> Update(int id, TimeCreateDto dto)
+    public async Task<IActionResult> Update(
+        int id,
+        TimeCreateDto dto)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = await _context.Times.FindAsync(id);
+        var time = await _timeService.UpdateAsync(id, dto);
 
         if (time == null)
             return NotFound();
-
-        time.Nome = dto.Nome;
-        time.Jogo = dto.Jogo;
-        time.Pais = dto.Pais;
-        time.Ranking = dto.Ranking;
-
-        await _context.SaveChangesAsync();
 
         return Ok(time);
     }
@@ -153,17 +153,18 @@ public class TimeController : ControllerBase
     /// Remove um time pelo ID.
     /// </summary>
     [HttpDelete("{id}")]
+    [SwaggerOperation(
+        Summary = "Remove um time",
+        Description = "Exclui um time pelo identificador.",
+        OperationId = "DeleteTime")]
     [SwaggerResponse(204, "Time removido com sucesso")]
     [SwaggerResponse(404, "Time não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
-        var time = await _context.Times.FindAsync(id);
+        var removido = await _timeService.DeleteAsync(id);
 
-        if (time == null)
+        if (!removido)
             return NotFound();
-
-        _context.Times.Remove(time);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
