@@ -18,7 +18,14 @@ public class PerfilCompetitivoController : ControllerBase
         _perfilService = perfilService;
     }
 
+    /// <summary>
+    /// Retorna os perfis competitivos cadastrados.
+    /// </summary>
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Lista os perfis competitivos",
+        Description = "Retorna os perfis competitivos de forma paginada.",
+        OperationId = "GetPerfisCompetitivos")]
     [SwaggerResponse(200, "Perfis competitivos encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum perfil competitivo encontrado")]
     [SwaggerResponse(400, "Parâmetros de paginação inválidos")]
@@ -45,6 +52,10 @@ public class PerfilCompetitivoController : ControllerBase
     /// Retorna um perfil competitivo pelo ID.
     /// </summary>
     [HttpGet("{id}")]
+    [SwaggerOperation(
+        Summary = "Busca um perfil competitivo por ID",
+        Description = "Retorna o perfil competitivo correspondente ao identificador informado.",
+        OperationId = "GetPerfilCompetitivoById")]
     [SwaggerResponse(200, "Perfil competitivo encontrado com sucesso")]
     [SwaggerResponse(404, "Perfil competitivo não encontrado")]
     public async Task<IActionResult> GetById(int id)
@@ -61,6 +72,10 @@ public class PerfilCompetitivoController : ControllerBase
     /// Retorna o perfil competitivo de um jogador.
     /// </summary>
     [HttpGet("jogador/{jogadorId}")]
+    [SwaggerOperation(
+        Summary = "Busca o perfil competitivo de um jogador",
+        Description = "Retorna o perfil competitivo associado ao jogador informado.",
+        OperationId = "GetPerfilByJogador")]
     [SwaggerResponse(200, "Perfil competitivo encontrado com sucesso")]
     [SwaggerResponse(404, "Perfil competitivo não encontrado para este jogador")]
     public async Task<IActionResult> GetByJogador(int jogadorId)
@@ -77,6 +92,10 @@ public class PerfilCompetitivoController : ControllerBase
     /// Cadastra um perfil competitivo para um jogador.
     /// </summary>
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Cadastra um perfil competitivo",
+        Description = "Cria um perfil para um jogador existente. Cada jogador pode possuir apenas um perfil competitivo.",
+        OperationId = "CreatePerfilCompetitivo")]
     [SwaggerResponse(201, "Perfil competitivo criado com sucesso")]
     [SwaggerResponse(400, "Jogador já possui perfil competitivo")]
     [SwaggerResponse(404, "Jogador não encontrado")]
@@ -111,6 +130,10 @@ public class PerfilCompetitivoController : ControllerBase
     /// Atualiza um perfil competitivo existente.
     /// </summary>
     [HttpPut("{id}")]
+    [SwaggerOperation(
+        Summary = "Atualiza um perfil competitivo",
+        Description = "Atualiza as estatísticas e o jogador associado ao perfil, respeitando a relação 1:1.",
+        OperationId = "UpdatePerfilCompetitivo")]
     [SwaggerResponse(200, "Perfil competitivo atualizado com sucesso")]
     [SwaggerResponse(400, "Jogador já possui outro perfil competitivo")]
     [SwaggerResponse(404, "Perfil competitivo ou jogador não encontrado")]
@@ -149,6 +172,10 @@ public class PerfilCompetitivoController : ControllerBase
     /// Remove um perfil competitivo pelo ID.
     /// </summary>
     [HttpDelete("{id}")]
+    [SwaggerOperation(
+        Summary = "Remove um perfil competitivo",
+        Description = "Exclui um perfil competitivo pelo identificador.",
+        OperationId = "DeletePerfilCompetitivo")]
     [SwaggerResponse(204, "Perfil competitivo removido com sucesso")]
     [SwaggerResponse(404, "Perfil competitivo não encontrado")]
     public async Task<IActionResult> Delete(int id)

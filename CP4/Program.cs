@@ -1,77 +1,112 @@
 using System.Reflection;
-using CP4.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using CP4.Application.Interfaces.Repositories;
 using CP4.Application.Interfaces.Services;
 using CP4.Application.Services;
+using CP4.Infrastructure.Data;
 using CP4.Infrastructure.Repositories;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Text.Json;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (!builder.Environment.IsEnvironment("Testing"))
+var applicationInsightsConnectionString =
+    Environment.GetEnvironmentVariable(
+        "APPLICATIONINSIGHTS_CONNECTION_STRING")
+    ?? builder.Configuration[
+        "ApplicationInsights:ConnectionString"];
+
+if (!builder.Environment.IsEnvironment("Testing") &&
+    !string.IsNullOrWhiteSpace(
+        applicationInsightsConnectionString))
 {
-    builder.Services.AddApplicationInsightsTelemetry();
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString =
+            applicationInsightsConnectionString;
+    });
 }
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.ReferenceHandler =
+            ReferenceHandler.IgnoreCycles;
     });
 
 builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.EnableAnnotations();
-    
+
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "ArenaSync API",
         Version = "v1",
-        Description = "API REST para gerenciamento de times, jogadores e perfis competitivos de e-sports."
+        Description =
+            "API REST para gerenciamento de times, jogadores e perfis competitivos de e-sports."
     });
 
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    var xmlFile =
+        $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+
+    var xmlPath =
+        Path.Combine(
+            AppContext.BaseDirectory,
+            xmlFile);
 
     options.IncludeXmlComments(xmlPath);
 });
 
 builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseOracle(
-        builder.Configuration.GetConnectionString("OracleConnection")
+        builder.Configuration.GetConnectionString(
+            "OracleConnection")
     )
 );
 
 builder.Services.AddHealthChecks()
     .AddCheck(
         "api",
-        () => HealthCheckResult.Healthy("API disponível"))
+        () =>
+            HealthCheckResult.Healthy(
+                "API disponível"))
     .AddDbContextCheck<ApplicationContext>(
         name: "oracle-database",
         failureStatus: HealthStatus.Unhealthy,
         tags: new[] { "database" });
 
+builder.Services.AddScoped<
+    ITimeRepository,
+    TimeRepository>();
 
-builder.Services.AddScoped<ITimeRepository, TimeRepository>();
-builder.Services.AddScoped<ITimeService, TimeService>();
-builder.Services.AddScoped<IJogadorRepository, JogadorRepository>();
-builder.Services.AddScoped<IJogadorService, JogadorService>();
-builder.Services.AddScoped<IPerfilCompetitivoRepository, PerfilCompetitivoRepository>();
-builder.Services.AddScoped<IPerfilCompetitivoService, PerfilCompetitivoService>();
+builder.Services.AddScoped<
+    ITimeService,
+    TimeService>();
+
+builder.Services.AddScoped<
+    IJogadorRepository,
+    JogadorRepository>();
+
+builder.Services.AddScoped<
+    IJogadorService,
+    JogadorService>();
+
+builder.Services.AddScoped<
+    IPerfilCompetitivoRepository,
+    PerfilCompetitivoRepository>();
+
+builder.Services.AddScoped<
+    IPerfilCompetitivoService,
+    PerfilCompetitivoService>();
 
 builder.Services.AddResponseCompression(options =>
 {
@@ -88,25 +123,28 @@ builder.Services.AddRateLimiter(options =>
             httpContext =>
             {
                 var ip =
-                    httpContext.Connection.RemoteIpAddress?.ToString()
+                    httpContext.Connection
+                        .RemoteIpAddress?
+                        .ToString()
                     ?? "unknown";
 
-                return RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: ip,
-                    factory: _ =>
-                        new FixedWindowRateLimiterOptions
-                        {
-                            PermitLimit = 20,
-                            Window = TimeSpan.FromMinutes(1),
-                            QueueLimit = 0,
-                            AutoReplenishment = true
-                        });
+                return RateLimitPartition
+                    .GetFixedWindowLimiter(
+                        partitionKey: ip,
+                        factory: _ =>
+                            new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 20,
+                                Window =
+                                    TimeSpan.FromMinutes(1),
+                                QueueLimit = 0,
+                                AutoReplenishment = true
+                            });
             });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -123,29 +161,43 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = async (context, report) =>
+app.MapHealthChecks(
+    "/health",
+    new HealthCheckOptions
     {
-        context.Response.ContentType = "application/json";
-
-        var response = new
+        ResponseWriter = async (context, report) =>
         {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(entry => new
-            {
-                name = entry.Key,
-                status = entry.Value.Status.ToString(),
-                description = entry.Value.Description,
-                durationMs = entry.Value.Duration.TotalMilliseconds
-            }),
-            totalDurationMs = report.TotalDuration.TotalMilliseconds
-        };
+            context.Response.ContentType =
+                "application/json";
 
-        await context.Response.WriteAsync(
-            JsonSerializer.Serialize(response));
-    }
-});
+            var response = new
+            {
+                status = report.Status.ToString(),
+
+                checks = report.Entries.Select(
+                    entry => new
+                    {
+                        name = entry.Key,
+                        status =
+                            entry.Value.Status.ToString(),
+                        description =
+                            entry.Value.Description,
+                        durationMs =
+                            entry.Value.Duration
+                                .TotalMilliseconds
+                    }),
+
+                totalDurationMs =
+                    report.TotalDuration
+                        .TotalMilliseconds
+            };
+
+            await context.Response.WriteAsync(
+                JsonSerializer.Serialize(response));
+        }
+    });
+
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
 
