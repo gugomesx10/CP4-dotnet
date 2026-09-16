@@ -1,9 +1,6 @@
-﻿using CP4.Infrastructure.Data;
-using CP4.Application.DTOs;
-using CP4.Application.DTOs.Responses;
-using CP4.Domain.Entities;
+﻿using CP4.Application.DTOs;
+using CP4.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace CP4.Controllers;
@@ -12,36 +9,27 @@ namespace CP4.Controllers;
 [Route("api/[controller]")]
 public class TimeController : ControllerBase
 {
-    private readonly ApplicationContext _context;
+    private readonly ITimeService _timeService;
 
-    public TimeController(ApplicationContext context)
+    public TimeController(ITimeService timeService)
     {
-        _context = context;
+        _timeService = timeService;
     }
 
     /// <summary>
-    /// Retorna todos os times cadastrados com seus jogadores.
+    /// Retorna todos os times cadastrados.
     /// </summary>
     [HttpGet]
     [SwaggerResponse(200, "Times encontrados com sucesso")]
     [SwaggerResponse(204, "Nenhum time encontrado")]
     public async Task<IActionResult> GetAll()
     {
-        var times = await _context.Times.ToListAsync();
+        var times = await _timeService.GetAllAsync();
 
         if (!times.Any())
             return NoContent();
 
-        var response = times.Select(t => new TimeResumoDto
-        {
-            Id = t.Id,
-            Nome = t.Nome,
-            Jogo = t.Jogo,
-            Pais = t.Pais,
-            Ranking = t.Ranking
-        });
-
-        return Ok(response);
+        return Ok(times);
     }
 
     /// <summary>
@@ -52,22 +40,12 @@ public class TimeController : ControllerBase
     [SwaggerResponse(404, "Time não encontrado")]
     public async Task<IActionResult> GetById(int id)
     {
-        var time = await _context.Times
-            .FirstOrDefaultAsync(t => t.Id == id);
+        var time = await _timeService.GetByIdAsync(id);
 
         if (time == null)
             return NotFound();
 
-        var response = new TimeResumoDto
-        {
-            Id = time.Id,
-            Nome = time.Nome,
-            Jogo = time.Jogo,
-            Pais = time.Pais,
-            Ranking = time.Ranking
-        };
-
-        return Ok(response);
+        return Ok(time);
     }
 
     /// <summary>
@@ -78,23 +56,12 @@ public class TimeController : ControllerBase
     [SwaggerResponse(204, "Nenhum time encontrado para este jogo")]
     public async Task<IActionResult> GetByJogo(string jogo)
     {
-        var times = await _context.Times
-            .Where(t => t.Jogo.ToLower() == jogo.ToLower())
-            .ToListAsync();
+        var times = await _timeService.GetByJogoAsync(jogo);
 
         if (!times.Any())
             return NoContent();
 
-        var response = times.Select(t => new TimeResumoDto
-        {
-            Id = t.Id,
-            Nome = t.Nome,
-            Jogo = t.Jogo,
-            Pais = t.Pais,
-            Ranking = t.Ranking
-        });
-
-        return Ok(response);
+        return Ok(times);
     }
 
     /// <summary>
@@ -108,18 +75,13 @@ public class TimeController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = new Time
-        {
-            Nome = dto.Nome,
-            Jogo = dto.Jogo,
-            Pais = dto.Pais,
-            Ranking = dto.Ranking
-        };
+        var time = await _timeService.CreateAsync(dto);
 
-        _context.Times.Add(time);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = time.Id }, time);
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = time.Id },
+            time
+        );
     }
 
     /// <summary>
@@ -134,17 +96,10 @@ public class TimeController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var time = await _context.Times.FindAsync(id);
+        var time = await _timeService.UpdateAsync(id, dto);
 
         if (time == null)
             return NotFound();
-
-        time.Nome = dto.Nome;
-        time.Jogo = dto.Jogo;
-        time.Pais = dto.Pais;
-        time.Ranking = dto.Ranking;
-
-        await _context.SaveChangesAsync();
 
         return Ok(time);
     }
@@ -157,13 +112,10 @@ public class TimeController : ControllerBase
     [SwaggerResponse(404, "Time não encontrado")]
     public async Task<IActionResult> Delete(int id)
     {
-        var time = await _context.Times.FindAsync(id);
+        var removido = await _timeService.DeleteAsync(id);
 
-        if (time == null)
+        if (!removido)
             return NotFound();
-
-        _context.Times.Remove(time);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

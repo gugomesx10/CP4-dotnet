@@ -3,6 +3,10 @@ using CP4.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
+using CP4.Application.Interfaces.Repositories;
+using CP4.Application.Interfaces.Services;
+using CP4.Application.Services;
+using CP4.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +45,9 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
         builder.Configuration.GetConnectionString("OracleConnection")
     )
 );
+
+builder.Services.AddScoped<ITimeRepository, TimeRepository>();
+builder.Services.AddScoped<ITimeService, TimeService>();
 
 var app = builder.Build();
 
