@@ -15,7 +15,10 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddApplicationInsightsTelemetry();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddApplicationInsightsTelemetry();
+}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -145,3 +148,7 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 });
 
 app.Run();
+
+public partial class Program
+{
+}
